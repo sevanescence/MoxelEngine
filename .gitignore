@@ -1,3 +1,9 @@
+# CMake Files
+cmake-build-debug/**
+
+# Local IDE Directory
+.idea/**
+
 # Prerequisites
 *.d
 
