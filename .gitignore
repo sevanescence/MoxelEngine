@@ -1,5 +1,6 @@
 # CMake Files
 cmake-build-debug/**
+cmake-build-release/**
 
 # Local IDE Directory
 .idea/**

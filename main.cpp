@@ -1,65 +1,41 @@
+/**
+ * Driver code to test library. The library is currently compiled as an executable
+ * for ease of testing. Intend to scale to a proper library before production.
+ */
+
+// ChunkSystem chunkSystem(Dimensions: {x: 16, y: 16, z: 16});
+// World world(ChunkSystem: chunkSystem, Generator: {Type: Perlin_Default, Seed: seed});
+// not really sure how to design the rendering world system right now, so I'll leave it like this
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <vector>
+#include "src/GLFWInstance.h"
+#include "src/WindowParams.h"
+
 #include <iostream>
-#include <unordered_map>
+#include <string>
+#include <memory>
 
-namespace Moxel {
-    typedef signed short    key_t;
-
+bool loop(Moxel::GLFWInstance &instance)
+{
+    static double deltaTime = 0;
+    if (deltaTime + 1 < glfwGetTime())
+    {
+        std::cout << "A second has passed.\n";
+        deltaTime = glfwGetTime();
+    }
+    return false;
 }
 
-void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-void processInput(GLFWwindow *window);
+int main()
+{
+    // TODO: RAII and proper resource management for instance.
+    Moxel::GLFWInstance instance(Moxel::CreateWindow(800, 800, "A Neat Window"));
 
-int main() {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE)
-#endif
-
-    GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", nullptr, nullptr);
-    if (window == nullptr) {
-        std::cerr << "Failed to create GLFW window.\n";
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    glfwMakeContextCurrent(window);
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-        std::cerr << "Failed to initialize GLAD.\n";
-        return EXIT_FAILURE;
-    }
-
-    glViewport(0, 0, 800, 600);
-    glfwSetFramebufferSizeCallback(window, &framebufferSizeCallback);
-
-
-
-    while (!glfwWindowShouldClose(window)) {
-        processInput(window);
-
-        // rendering stuff
-        glClearColor(.2f, .3f, .3f, 1.f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    glfwTerminate();
-}
-
-void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-void processInput(GLFWwindow *window) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
+    // TODO: Throw error if #Start is called before #Initialize
+    instance.SetGLFWGraphicsLoopCallback(&loop);
+    instance.Initialize();
+    instance.Start();
+    instance.Terminate();
 }
