@@ -42,7 +42,8 @@ file(DOWNLOAD
 set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_EXE_LINKER_FLAGS "-static")
-add_executable(MoxelEngine main.cpp src/GLFWInstance.cpp src/GLFWInstance.h src/WindowParams.cpp src/WindowParams.h src/World.cpp src/World.h src/Window.cpp src/Window.h)
+# todo replace with a dynamic file finder
+add_executable(MoxelEngine main.cpp src/GLFWContext.cpp src/GLFWContext.h src/World.cpp src/World.h src/Window.cpp src/Window.h src/GLFWUtils.h src/GLFWUtils.cpp src/Moxel.h src/Moxel.cpp)
 target_link_libraries(MoxelEngine PUBLIC glm glad glfw freetype)
 
 file(GLOB SHADERS_FOLDER "shaders/*.glsl")

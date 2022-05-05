@@ -10,14 +10,20 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "src/GLFWInstance.h"
-#include "src/WindowParams.h"
+#include "src/Moxel.h"
+#include "src/GLFWContext.h"
+#include "src/Window.h"
+#include "src/GLFWUtils.h"
 
 #include <iostream>
 #include <string>
 #include <memory>
 
-bool loop(Moxel::GLFWInstance &instance)
+// TODO list:
+// - Key callback handler
+// - Renderer
+
+bool loop(Moxel::GLFWContext &instance)
 {
     static double deltaTime = 0;
     if (deltaTime + 1 < glfwGetTime())
@@ -25,17 +31,35 @@ bool loop(Moxel::GLFWInstance &instance)
         std::cout << "A second has passed.\n";
         deltaTime = glfwGetTime();
     }
-    return false;
+
+    if (glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_F11) == GLFW_PRESS)
+    {
+        Moxel::GetWindow().SetMonitorHandle(Moxel::GetPrimaryMonitorHandle());
+    }
+    else if (glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_F10) == GLFW_PRESS)
+    {
+        Moxel::GetWindow().SetMonitorHandle(nullptr);
+    }
+
+    return glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS;
 }
 
 int main()
 {
-    // TODO: RAII and proper resource management for instance.
-    Moxel::GLFWInstance instance(Moxel::CreateWindow(800, 800, "A Neat Window"));
+    try
+    {
+        Moxel::InitializeGLFW();
+    }
+    catch (const char *s)
+    {
+        std::cout << s;
+        Moxel::TerminateGLFW();
+        return 1;
+    }
+    Moxel::GetGlobalContext().Initialize();
+    Moxel::GetGlobalContext().SetGLFWGraphicsLoopCallback(&loop);
 
-    // TODO: Throw error if #Start is called before #Initialize
-    instance.SetGLFWGraphicsLoopCallback(&loop);
-    instance.Initialize();
-    instance.Start();
-    instance.Terminate();
+    Moxel::GetWindow().SetTitle("An interesting title.");
+
+    Moxel::GetGlobalContext().Start();
 }

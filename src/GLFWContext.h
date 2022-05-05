@@ -2,13 +2,15 @@
 // Created by damia on 5/5/2022.
 //
 
-#ifndef MOXELENGINE_GLFWINSTANCE_H
-#define MOXELENGINE_GLFWINSTANCE_H
+#ifndef MOXELENGINE_GLFWCONTEXT_H
+#define MOXELENGINE_GLFWCONTEXT_H
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "WindowParams.h"
+#include "Window.h"
+
+#include <memory>
 
 // TODO:
 // Wrap a lot of OpenGL calls behind this header, including (but not limited to)
@@ -18,29 +20,21 @@ namespace Moxel
 {
     /**
      * Manages OpenGL and GLFW boilerplate and essential functions and processes.
-     * This class is trivially movable (not copyable) but is still managed as a resource handler
-     * to avoid ambiguity between truly copyable types.
+     * This class is a singleton and should not be instantiated directly,
+     * but rather through Moxel::CreateGlobalContext
      */
-    class GLFWInstance
+    class GLFWContext
     {
-        GLFWwindow *mWindow;
-        WindowParams mWindowParams;
-
-        bool (*mLoop)(GLFWInstance &instance);
+        bool (*mLoopCallback)(GLFWContext &instance);
         bool mLoopShouldClose;
     public:
-        GLFWInstance();
-        /**
-         * Creates a GLFWInstance with defined parameters for how the managed window should behave.
-         * @param window A struct that describes what parameters to pass to the managed window.
-         */
-        explicit GLFWInstance(WindowParams window);
+        GLFWContext();
 
         // TODO: I might make mLoopShouldClose a public attribute. As far as I can tell it would not change anything.
 
         /**
          * Manually set whether the loop should close (this is useful for callbacks handled
-         * by the GLFWInstance instance rather than directly in the instance loop).
+         * by the GLFWContext instance rather than directly in the instance loop).
          * @param loopShouldClose
          */
         void SetLoopShouldClose(bool loopShouldClose);
@@ -58,8 +52,7 @@ namespace Moxel
         void Initialize();
 
         /**
-         * Terminates GLFWInstance (destruction will not call this implicitly, it must
-         * be called explicitly).
+         * Terminates GLFWContext. This is called at the end of Moxel::GLFWContext::Start().
          */
         void Terminate();
 
@@ -67,15 +60,19 @@ namespace Moxel
          * Sets the program loop for this instance.
          * @param loop A function callback. Return true to end loop.
          */
-        void SetGLFWGraphicsLoopCallback(bool (*loop)(GLFWInstance &instance));
+        void SetGLFWGraphicsLoopCallback(bool (*loop)(GLFWContext &instance));
 
         /**
-         * Begin program loop.
+         * Begin program loop. Once this ends, Moxel::GLFWContext::Terminate() is called.
          */
         void Start();
     };
 
+    static std::shared_ptr<GLFWContext> globalContext;
+
+    GLFWContext &GetGlobalContext();
+
     void DefaultFramebufferSizeCallback(GLFWwindow *window, int width, int height);
 }
 
-#endif //MOXELENGINE_GLFWINSTANCE_H
+#endif //MOXELENGINE_GLFWCONTEXT_H
