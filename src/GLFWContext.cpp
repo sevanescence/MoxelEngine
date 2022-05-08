@@ -8,89 +8,181 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
-#include <utility>
+#include <memory>
 
-#include "Window.h"
-
-// -- Global context
-
-Moxel::GLFWContext &Moxel::GetGlobalContext()
+Moxel::GLFW::GLFW()
 {
-    using namespace Moxel;
-    if (globalContext == nullptr)
-    {
-        globalContext = std::make_shared<GLFWContext>();
-    }
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
 
-    return *globalContext;
+    std::cout << "GLFW initialized.\n";
 }
 
-// -- GLFWContext
-
-Moxel::GLFWContext::GLFWContext() :
-  mLoopCallback(nullptr),
-  mLoopShouldClose(false)
+Moxel::GLFW::~GLFW()
 {
-
-}
-
-void Moxel::GLFWContext::SetLoopShouldClose(bool loopShouldClose)
-{
-    mLoopShouldClose = loopShouldClose;
-}
-
-bool Moxel::GLFWContext::GetLoopShouldClose() const
-{
-    return mLoopShouldClose;
-}
-
-void Moxel::GLFWContext::Initialize()
-{
-    // TODO: This will have to be modifiable eventually, for dynamic window creation.
-    Moxel::GetWindow().Initialize();
-    glfwMakeContextCurrent(Moxel::GetWindow().GetWindowHandle());
-
-    if (not gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
-    {
-        throw "(Currently unmanaged) ERROR: GLAD could not be initialized. TODO: Make a proper error report.";
-    }
-
-    glViewport(0, 0, Moxel::GetWindow().GetWidth(), Moxel::GetWindow().GetHeight());
-    Moxel::GetWindow().SetFramebufferSizeCallback(&DefaultFramebufferSizeCallback);
-}
-
-void Moxel::GLFWContext::Terminate()
-{
-    // TODO: Free any buffers stored in here in the future (maybe give the end user an option to do this?)
-    // ^ this will be done in the Renderer
-
-    glfwDestroyWindow(Moxel::GetWindow().GetWindowHandle());
     glfwTerminate();
 
-    mLoopShouldClose = false;
-    std::cout << "GLFWContext terminated.\n";
+    std::cout << "GLFW terminated.\n";
 }
 
-void Moxel::DefaultFramebufferSizeCallback(GLFWwindow *, int width, int height)
+Moxel::GLFW &Moxel::GLFW::GetContext()
 {
-    glViewport(0, 0, width, height);
+    static GLFW context;
+    return context;
 }
 
-void Moxel::GLFWContext::SetGLFWGraphicsLoopCallback(bool (*loop)(GLFWContext &))
+bool Moxel::GLFW::GetLoopShouldExit() const
 {
-    mLoopCallback = loop;
+    return mLoopShouldExit;
 }
 
-void Moxel::GLFWContext::Start()
+void Moxel::GLFW::SetLoopShouldExit(bool loopShouldExit)
 {
-    // custom break condition for use by end user.
-    while (not glfwWindowShouldClose(Moxel::GetWindow().GetWindowHandle()) && not mLoopShouldClose)
+    mLoopShouldExit = loopShouldExit;
+}
+
+void Moxel::GLFW::SetUpdateCallback(void (*updateCallback)())
+{
+    mUpdateCallback = updateCallback;
+}
+
+Moxel::Window Moxel::GLFW::GetMainWindow()
+{
+    return mMainWindow;
+}
+
+Moxel::Window Moxel::GLFW::MakeWindow()
+{
+    auto window = std::make_shared<GLFW::GLFWWindow>();
+    mMainWindow = window;
+    return window;
+}
+
+void Moxel::GLFW::Start()
+{
+    while (not mLoopShouldExit)
     {
-        glfwSwapBuffers(Moxel::GetWindow().GetWindowHandle());
-        glfwPollEvents();
+        /*
+         * For now, we are going to use the  context of a single window. I am only doing
+         * this to make development and testing a bit easier in the early stages. I will
+         * eventually make a window context  manager and go through each existing window
+         * and append a different renderer to  reach window (if I'm able to do that...).
+         */
 
-        mLoopShouldClose = mLoopCallback(*this);
+        mUpdateCallback();
+
+        glfwSwapBuffers(mMainWindow->mWindowHandle);
+        glfwPollEvents();
+    }
+}
+
+bool Moxel::GLFW::GLFWWindow::sGladIsLoaded = false;
+const char *Moxel::GLFW::GLFWWindow::sDefaultTitle = "Moxel GLFW Window";
+
+Moxel::GLFW::GLFWWindow::GLFWWindow()
+: mWindowHandle(
+        glfwCreateWindow(
+                800,
+                600,
+                sDefaultTitle,
+                nullptr,
+                nullptr)
+        ),
+        mTitle(sDefaultTitle)
+{
+    glfwMakeContextCurrent(mWindowHandle);
+
+    if (not sGladIsLoaded)
+    {
+        if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) == GLAD_LOAD_FAILURE)
+        {
+            throw "Error: GLAD could not be loaded.";
+        }
+
+        sGladIsLoaded = true;
     }
 
-    Terminate();
+    // -- Set callbacks
+
+    std::cout << "GLFW window initialized.\n";
+}
+
+Moxel::GLFW::GLFWWindow::~GLFWWindow()
+{
+    glfwDestroyWindow(mWindowHandle);
+    std::cout << "GLFW window destroyed.\n";
+}
+
+void Moxel::GLFW::GLFWWindow::SetTitle(const std::string &title)
+{
+    mTitle = title;
+    glfwSetWindowTitle(mWindowHandle, mTitle.c_str());
+}
+
+void Moxel::GLFW::GLFWWindow::SetWindowSize(int width, int height)
+{
+    glfwSetWindowSize(mWindowHandle, width, height);
+}
+
+std::string Moxel::GLFW::GLFWWindow::GetTitle() const
+{
+    return mTitle;
+}
+
+int Moxel::GLFW::GLFWWindow::GetHeight() const
+{
+    int height;
+    glfwGetWindowSize(mWindowHandle, nullptr, &height);
+    return height;
+}
+
+int Moxel::GLFW::GLFWWindow::GetWidth() const
+{
+    int width;
+    glfwGetWindowSize(mWindowHandle, &width, nullptr);
+    return width;
+}
+
+void Moxel::GLFW::GLFWWindow::MakeFullscreen(int idx)
+{
+    int count;
+    GLFWmonitor **monitors = glfwGetMonitors(&count);
+    if (idx >= count)
+    {
+        throw "Error: Monitor index is out of bounds.";
+    }
+
+    GLFWmonitor *monitor = monitors[idx];
+    const GLFWvidmode *vidmode = glfwGetVideoMode(monitor);
+
+    glfwSetWindowMonitor(
+            mWindowHandle,
+            monitor,
+            0, 0,
+            vidmode->width,
+            vidmode->height,
+            vidmode->refreshRate
+            );
+}
+
+void Moxel::GLFW::GLFWWindow::MakeFullscreen()
+{
+    MakeFullscreen(GLFW_PRIMARY_MONITOR_IDX);
+}
+
+void Moxel::GLFW::GLFWWindow::MakeWindowed()
+{
+    int width, height;
+    glfwGetWindowSize(mWindowHandle, &width, &height);
+    glfwSetWindowMonitor(mWindowHandle, nullptr, 100, 100, width, height, 60);
+}
+
+GLFWwindow *Moxel::GLFW::GLFWWindow::GetGLFWWindowHandle()
+{
+    return mWindowHandle;
 }

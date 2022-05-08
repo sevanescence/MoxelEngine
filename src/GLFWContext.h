@@ -10,69 +10,87 @@
 
 #include "Window.h"
 
+#include <string>
 #include <memory>
 
 // TODO:
 // Wrap a lot of OpenGL calls behind this header, including (but not limited to)
 // renaming the window, arbitrary resizing, monitor and resolution, etc etc.
 
+#define GLAD_LOAD_FAILURE 0
+#define GLFW_PRIMARY_MONITOR_IDX 0
+
 namespace Moxel
 {
-    /**
-     * Manages OpenGL and GLFW boilerplate and essential functions and processes.
-     * This class is a singleton and should not be instantiated directly,
-     * but rather through Moxel::CreateGlobalContext
-     */
-    class GLFWContext
+    class IWindow;
+    class GLFW;
+
+    using Window = std::shared_ptr<IWindow>;
+
+    class IWindow
     {
-        bool (*mLoopCallback)(GLFWContext &instance);
-        bool mLoopShouldClose;
     public:
-        GLFWContext();
+        virtual void SetTitle(const std::string &title) = 0;
+        virtual void SetWindowSize(int width, int height) = 0;
 
-        // TODO: I might make mLoopShouldClose a public attribute. As far as I can tell it would not change anything.
+        virtual std::string GetTitle() const = 0;
+        virtual int GetHeight() const = 0;
+        virtual int GetWidth() const = 0;
 
-        /**
-         * Manually set whether the loop should close (this is useful for callbacks handled
-         * by the GLFWContext instance rather than directly in the instance loop).
-         * @param loopShouldClose
-         */
-        void SetLoopShouldClose(bool loopShouldClose);
-
-        /**
-         * Gets whether the loop should close or not. This member is not publicly accessible to avoid
-         * unsafely writing to the object as well as to provide a more intuitive interface.
-         * @return whether the loop should close.
-         */
-        [[nodiscard]] bool GetLoopShouldClose() const;
-
-        /**
-         * Initializes crucial GLFW processes and callbacks.
-         */
-        void Initialize();
-
-        /**
-         * Terminates GLFWContext. This is called at the end of Moxel::GLFWContext::Start().
-         */
-        void Terminate();
-
-        /**
-         * Sets the program loop for this instance.
-         * @param loop A function callback. Return true to end loop.
-         */
-        void SetGLFWGraphicsLoopCallback(bool (*loop)(GLFWContext &instance));
-
-        /**
-         * Begin program loop. Once this ends, Moxel::GLFWContext::Terminate() is called.
-         */
-        void Start();
+        virtual void MakeFullscreen(int idx) = 0;
+        virtual void MakeFullscreen() = 0;
+        virtual void MakeWindowed() = 0;
     };
 
-    static std::shared_ptr<GLFWContext> globalContext;
+    class GLFW
+    {
+    public:
+        class GLFWWindow;
+    private:
+        void (*mUpdateCallback)();
+        bool mLoopShouldExit;
+        std::shared_ptr<GLFWWindow> mMainWindow;
 
-    GLFWContext &GetGlobalContext();
+        GLFW();
+        ~GLFW();
+    public:
+        static GLFW &GetContext();
 
-    void DefaultFramebufferSizeCallback(GLFWwindow *window, int width, int height);
+        bool GetLoopShouldExit() const;
+        void SetLoopShouldExit(bool loopShouldExit);
+        void SetUpdateCallback(void (*updateCallback)());
+
+        Window GetMainWindow();
+
+        Window MakeWindow();
+        void Start();
+        class GLFWWindow : public IWindow
+        {
+            friend GLFW;
+
+            static bool sGladIsLoaded;
+            static const char *sDefaultTitle;
+            GLFWwindow *mWindowHandle{};
+
+            std::string mTitle;
+        public:
+            GLFWWindow();
+            ~GLFWWindow();
+            void SetTitle(const std::string &title) override;
+            void SetWindowSize(int width, int height) override;
+
+            std::string GetTitle() const override;
+            int GetHeight() const override;
+            int GetWidth() const override;
+
+            void MakeFullscreen(int idx) override;
+            void MakeFullscreen() override;
+            void MakeWindowed() override;
+
+            // implementation-specific functions
+            GLFWwindow *GetGLFWWindowHandle();
+        };
+    };
 }
 
 #endif //MOXELENGINE_GLFWCONTEXT_H

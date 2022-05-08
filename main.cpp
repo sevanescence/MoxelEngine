@@ -11,9 +11,6 @@
 #include <GLFW/glfw3.h>
 
 #include "src/Moxel.h"
-#include "src/GLFWContext.h"
-#include "src/Window.h"
-#include "src/GLFWUtils.h"
 
 #include <iostream>
 #include <string>
@@ -23,43 +20,33 @@
 // - Key callback handler
 // - Renderer
 
-bool loop(Moxel::GLFWContext &instance)
+// Called once per frame
+void Update()
 {
-    static double deltaTime = 0;
-    if (deltaTime + 1 < glfwGetTime())
+    auto &context = Moxel::GLFW::GetContext();
+
+    // -- Set to fullscreen after 3 seconds
+    GLFWwindow *glfwWindowHandle = dynamic_cast<Moxel::GLFW::GLFWWindow *>(context.GetMainWindow().get())->GetGLFWWindowHandle();
+    if (glfwGetTime() > 3 && glfwGetWindowMonitor(glfwWindowHandle) == nullptr)
     {
-        std::cout << "A second has passed.\n";
-        deltaTime = glfwGetTime();
+        context.GetMainWindow()->MakeFullscreen();
     }
 
-    if (glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_F11) == GLFW_PRESS)
+    // -- Close after 7 seconds
+    if (glfwGetTime() > 7)
     {
-        Moxel::GetWindow().SetMonitorHandle(Moxel::GetPrimaryMonitorHandle());
+        context.SetLoopShouldExit(true);
     }
-    else if (glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_F10) == GLFW_PRESS)
-    {
-        Moxel::GetWindow().SetMonitorHandle(nullptr);
-    }
-
-    return glfwGetKey(Moxel::GetWindow().GetWindowHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS;
 }
 
 int main()
 {
-    try
-    {
-        Moxel::InitializeGLFW();
-    }
-    catch (const char *s)
-    {
-        std::cout << s;
-        Moxel::TerminateGLFW();
-        return 1;
-    }
-    Moxel::GetGlobalContext().Initialize();
-    Moxel::GetGlobalContext().SetGLFWGraphicsLoopCallback(&loop);
+    auto &context = Moxel::GLFW::GetContext();
+    Moxel::Window window = context.MakeWindow();
 
-    Moxel::GetWindow().SetTitle("An interesting title.");
+    window->SetTitle("Awesome Window");
 
-    Moxel::GetGlobalContext().Start();
+    context.SetUpdateCallback(&Update);
+
+    context.Start();
 }
