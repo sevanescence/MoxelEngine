@@ -43,7 +43,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 # todo replace with a dynamic file finder
-add_executable(MoxelEngine main.cpp src/GLFWContext.cpp src/GLFWContext.h src/World.cpp src/World.h src/Window.cpp src/Window.h src/GLFWUtils.h src/GLFWUtils.cpp src/Moxel.h src/Moxel.cpp src/Callbacks.h src/Callbacks.cpp)
+add_executable(MoxelEngine main.cpp src/WindowContext.cpp src/WindowContext.h src/World.cpp src/World.h src/GLFWUtils.h src/GLFWUtils.cpp src/Moxel.h src/Moxel.cpp src/Callbacks.h src/Callbacks.cpp)
 target_link_libraries(MoxelEngine PUBLIC glm glad glfw freetype)
 
 file(GLOB SHADERS_FOLDER "shaders/*.glsl")

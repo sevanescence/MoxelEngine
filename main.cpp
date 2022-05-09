@@ -20,33 +20,41 @@
 // - Key callback handler
 // - Renderer
 
+// Called once before the loop
+void Initialize()
+{
+    Moxel::GetCurrentContext().GetMainWindow().MakeFullscreen();
+}
+
 // Called once per frame
 void Update()
 {
-    auto &context = Moxel::GLFW::GetContext();
+    using namespace Moxel;
+    WindowContext context = GetCurrentContext();
 
-    // -- Set to fullscreen after 3 seconds
-    GLFWwindow *glfwWindowHandle = dynamic_cast<Moxel::GLFW::GLFWWindow *>(context.GetMainWindow().get())->GetGLFWWindowHandle();
-    if (glfwGetTime() > 3 && glfwGetWindowMonitor(glfwWindowHandle) == nullptr)
+    GLFWwindow *glfwWindowHandle = dynamic_cast<GLFW::GLFWWindow&>(context.GetMainWindow()).GetGLFWWindowHandle();
+    if (glfwGetTime() > 3 && glfwGetWindowMonitor(glfwWindowHandle) != nullptr)
     {
-        context.GetMainWindow()->MakeFullscreen();
+        context.GetMainWindow().MakeWindowed();
     }
 
-    // -- Close after 7 seconds
     if (glfwGetTime() > 7)
     {
-        context.SetLoopShouldExit(true);
+        std::cout << "Five seconds have passed. Closing application.\n";
+        context.SetContextShouldClose(true);
     }
 }
 
 int main()
 {
-    auto &context = Moxel::GLFW::GetContext();
-    Moxel::Window window = context.MakeWindow();
+    using namespace Moxel;
+    WindowContext context = CreateContext<GLFW>();
+    MakeContextCurrent(context);
 
-    window->SetTitle("Awesome Window");
+    Window window = context.MakeWindow();
+    window.SetTitle("Awesome Window");
 
-    context.SetUpdateCallback(&Update);
-
+    context.SetInitCallback(Initialize);
+    context.SetUpdateCallback(Update);
     context.Start();
 }

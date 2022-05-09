@@ -2,13 +2,48 @@
 // Created by damia on 5/5/2022.
 //
 
-#include "GLFWContext.h"
+#include "WindowContext.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <memory>
+
+static std::shared_ptr<Moxel::IContext> _currentContext;
+static std::vector<std::shared_ptr<Moxel::IContext>> _contexts;
+
+void Moxel::MakeContextCurrent(Moxel::WindowContext context)
+{
+    auto ptr = &context;
+    auto it = _contexts.begin();
+    for (; it != _contexts.end(); ++it)
+    {
+        if (it->get() == ptr)
+        {
+            break;
+        }
+    }
+    if (it == _contexts.end())
+    {
+        throw "WindowContext is not stored in context list. This is a fatal error and should be reported to the author.";
+    }
+    else
+    {
+        _currentContext = *it;
+        std::cout << "WindowContext made current: " << _currentContext.get() << '\n';
+    }
+}
+
+Moxel::WindowContext Moxel::GetCurrentContext()
+{
+    return *_currentContext;
+}
+
+std::vector<std::shared_ptr<Moxel::IContext>> &Moxel::GetDefinedContexts()
+{
+    return _contexts;
+}
 
 Moxel::GLFW::GLFW()
 {
@@ -36,14 +71,14 @@ Moxel::GLFW &Moxel::GLFW::GetContext()
     return context;
 }
 
-bool Moxel::GLFW::GetLoopShouldExit() const
+bool Moxel::GLFW::GetContextShouldClose() const
 {
     return mLoopShouldExit;
 }
 
-void Moxel::GLFW::SetLoopShouldExit(bool loopShouldExit)
+void Moxel::GLFW::SetContextShouldClose(bool contextShouldCLose)
 {
-    mLoopShouldExit = loopShouldExit;
+    mLoopShouldExit = contextShouldCLose;
 }
 
 void Moxel::GLFW::SetUpdateCallback(void (*updateCallback)())
@@ -51,20 +86,27 @@ void Moxel::GLFW::SetUpdateCallback(void (*updateCallback)())
     mUpdateCallback = updateCallback;
 }
 
+void Moxel::GLFW::SetInitCallback(void (*initCallback)())
+{
+    mInitCallback = initCallback;
+}
+
 Moxel::Window Moxel::GLFW::GetMainWindow()
 {
-    return mMainWindow;
+    return *mMainWindow;
 }
 
 Moxel::Window Moxel::GLFW::MakeWindow()
 {
     auto window = std::make_shared<GLFW::GLFWWindow>();
     mMainWindow = window;
-    return window;
+    return *window;
 }
 
 void Moxel::GLFW::Start()
 {
+    if (mInitCallback != nullptr)
+        mInitCallback();
     while (not mLoopShouldExit)
     {
         /*

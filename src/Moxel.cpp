@@ -5,10 +5,3 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
-#include "GLFWUtils.h"
-#include "GLFWContext.h"
-#include "Window.h"
-#include "Callbacks.h"
-
-

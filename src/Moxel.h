@@ -6,8 +6,7 @@
 #define MOXELENGINE_MOXEL_H
 
 #include "GLFWUtils.h"
-#include "GLFWContext.h"
-#include "Window.h"
+#include "WindowContext.h"
 #include "Callbacks.h"
 
 namespace Moxel

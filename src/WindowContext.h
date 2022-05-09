@@ -2,14 +2,17 @@
 // Created by damia on 5/5/2022.
 //
 
-#ifndef MOXELENGINE_GLFWCONTEXT_H
-#define MOXELENGINE_GLFWCONTEXT_H
+#ifndef MOXELENGINE_WINDOWCONTEXT_H
+#define MOXELENGINE_WINDOWCONTEXT_H
+
+#include "Moxel.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Window.h"
-
+#include <type_traits>
+#include <iostream>
+#include <vector>
 #include <string>
 #include <memory>
 
@@ -22,10 +25,24 @@
 
 namespace Moxel
 {
+    class IContext;
     class IWindow;
     class GLFW;
 
-    using Window = std::shared_ptr<IWindow>;
+    using Window = IWindow &;
+    using WindowContext = IContext &;
+
+    void MakeContextCurrent(WindowContext context);
+    WindowContext GetCurrentContext();
+    std::vector<std::shared_ptr<IContext>> &GetDefinedContexts();
+
+    template <typename DerivedContextType>
+    WindowContext CreateContext() requires(std::is_base_of_v<Moxel::IContext, DerivedContextType>)
+    {
+        auto context = std::make_shared<DerivedContextType>();
+        GetDefinedContexts().push_back(context);
+        return *context;
+    }
 
     class IWindow
     {
@@ -42,28 +59,44 @@ namespace Moxel
         virtual void MakeWindowed() = 0;
     };
 
-    class GLFW
+    class IContext
+    {
+    public:
+        virtual bool GetContextShouldClose() const = 0;
+        virtual void SetContextShouldClose(bool contextShouldClose) = 0;
+        virtual void SetUpdateCallback(void (*updateCallback)()) = 0;
+        virtual void SetInitCallback(void (*initCallback)()) = 0;
+
+        virtual Window GetMainWindow() = 0;
+        virtual Window MakeWindow() = 0;
+
+        virtual void Start() = 0;
+    };
+
+    class GLFW : public IContext
     {
     public:
         class GLFWWindow;
     private:
-        void (*mUpdateCallback)();
         bool mLoopShouldExit;
         std::shared_ptr<GLFWWindow> mMainWindow;
+        void (*mUpdateCallback)() = 0;
+        void (*mInitCallback)() = 0;
 
+    public:
         GLFW();
         ~GLFW();
-    public:
         static GLFW &GetContext();
 
-        bool GetLoopShouldExit() const;
-        void SetLoopShouldExit(bool loopShouldExit);
-        void SetUpdateCallback(void (*updateCallback)());
+        bool GetContextShouldClose() const override;
+        void SetContextShouldClose(bool contextShouldCLose) override;
+        void SetUpdateCallback(void (*updateCallback)()) override;
+        void SetInitCallback(void (*initCallback)()) override;
 
-        Window GetMainWindow();
+        Window GetMainWindow() override;
 
-        Window MakeWindow();
-        void Start();
+        Window MakeWindow() override;
+        void Start() override;
         class GLFWWindow : public IWindow
         {
             friend GLFW;
@@ -93,4 +126,4 @@ namespace Moxel
     };
 }
 
-#endif //MOXELENGINE_GLFWCONTEXT_H
+#endif //MOXELENGINE_WINDOWCONTEXT_H
